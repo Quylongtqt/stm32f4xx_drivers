@@ -1,0 +1,120 @@
+/*
+ * stm32f407xx_gpio_driver.h
+ *
+ *  Created on: Jun 28, 2021
+ *      Author: Quy Long
+ */
+
+#ifndef INC_STM32F407XX_GPIO_DRIVER_H_
+#define INC_STM32F407XX_GPIO_DRIVER_H_
+
+typedef struct
+{
+	uint8_t	GPIO_PinNumber;
+	uint8_t	GPIO_PinMode;
+	uint8_t	GPIO_PinSpeed;
+	uint8_t	GPIO_PinPuPdControl;
+	uint8_t	GPIO_PinOPType;
+	uint8_t	GPIO_PinAltFunMode;
+}GPIO_PinConfig_t;
+
+/*
+ * Handle structure for a GPIO pin
+ */
+
+typedef	struct
+{
+	GPIO_RegDef_t 		*pGPIOx;		/*!< This holds the base adrress of the GPIO port to which the pin belongs >*/
+	GPIO_PinConfig_t	GIPO_PinConfig;	/*!<This holds GPIO pin configuration settings >*/
+}GPIO_Handle_t;
+
+/*
+ * GPIO pin Number macros
+ */
+#define GPIO_PIN_NO_0			0
+#define GPIO_PIN_NO_1			1
+#define GPIO_PIN_NO_2			2
+#define GPIO_PIN_NO_3			3
+#define GPIO_PIN_NO_4			4
+#define GPIO_PIN_NO_5			5
+#define GPIO_PIN_NO_6			6
+#define GPIO_PIN_NO_7			7
+#define GPIO_PIN_NO_8			8
+#define GPIO_PIN_NO_9			9
+#define GPIO_PIN_NO_10			10
+#define GPIO_PIN_NO_11			11
+#define GPIO_PIN_NO_12			12
+#define GPIO_PIN_NO_13			13
+#define GPIO_PIN_NO_14			14
+#define GPIO_PIN_NO_15			15
+
+/*
+ * GPIO pin possible modes
+ */
+
+#define GPIO_MODE_IN			0
+#define GPIO_MODE_OUT			1
+#define GPIO_MODE_ALTFN			2
+#define GPIO_MODE_ANALOG		3
+#define GPIO_MODE_IT_FT			4
+#define GPIO_MODE_IT_RT			5
+#define GPIO_MODE_IT_RFT		6
+
+/*
+ * GPIO pin possible output types
+ */
+
+#define GPIO_OP_TYPE_PP			0
+#define GPIO_OP_TYPE_OD			1
+
+/*
+ * GPIO pin possible output types
+ */
+
+#define GPIO_SPEED_LOW			0
+#define GPIO_SPEDD_MEDIUM		1
+#define GPIO_SPEED_FAST			2
+#define GPIO_SPEDD_HIGH			3
+
+/*
+ * GPIO pin Pull up and Pull down configuration macros
+ */
+
+#define GPIO_NO_PUPD			0
+#define GPIO_PIN_PU				1
+#define GPIO_PIN_PD				2
+
+/****************************************************************************************************
+ * 								APIs supported by this driver
+ *			 For more information about APIs check the function definitions
+ *
+ ****************************************************************************************************/
+/*
+ * Peripheral Clock Setup
+ */
+void GIPO_PeriperalClockControl(GPIO_RegDef_t *pGPIOx, uint8_t ENorDIS);
+
+
+/*
+ * Init and DeInit
+ */
+void GIPO_Init(GPIO_Handle_t *pGPIOHanlde);
+void GIPO_DeInit(GPIO_RegDef_t *pGPIOx);
+
+/*
+ * Data Read and Write
+ */
+uint8_t GIPO_ReadFromInputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber);
+uint16_t GIPO_ReadFromInputPort(GPIO_RegDef_t *pGPIOx);
+void GIPO_WriteToOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber, uint8_t Value);
+void GIPO_WriteToOutputPort(GPIO_RegDef_t *pGPIOx, uint16_t Value);
+void GIPO_ToggleOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber);
+
+/*
+ * IRQ Configuration and ISR handling
+ */
+void GIPO_IRQConfig(uint8_t IRQNumber, uint8_t IRQPriority, uint8_t ENorDIS);
+void GIPO_IRQHandling(uint8_t PinNumber);
+
+
+#endif /* INC_STM32F407XX_GPIO_DRIVER_H_ */
