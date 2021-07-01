@@ -180,28 +180,109 @@ void GIPO_DeInit(GPIO_RegDef_t *pGPIOx)
 	}
 }
 
-/*
- * Data Read and Write
- */
+/****************************************************************************************************
+  * @Function		-	GIPO_ReadFromInputPin
+  *
+  * @brief			-	This Function disables or disables peripheral clock for the given GPIO port
+  *
+  * @param    		-	pGPIOx : GPIOx
+  *
+  * @param    		-	PinNumber
+  *
+  * @retval			-	0 or 1
+  *
+  * @Note			-	None
+  */
 uint8_t GIPO_ReadFromInputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber)
 {
-
+	uint8_t value;
+	value = (uint8_t)((pGPIOx->IRD >> PinNumber) & 0x00000001);
+	return value;
 }
+
+/****************************************************************************************************
+  * @Function		-	GIPO_ReadFromInputPort
+  *
+  * @brief			-	This Function disables or disables peripheral clock for the given GPIO port
+  *
+  * @param    		-	pGPIOx : GPIOx
+  *
+  * @retval			-	0 or 1
+  *
+  * @Note			-	None
+  */
+
 uint16_t GIPO_ReadFromInputPort(GPIO_RegDef_t *pGPIOx)
 {
-
-}
+	uint16_t value;
+	value = (uint16_t)pGPIOx->IRD ;
+	return value;
+} 
+/****************************************************************************************************
+  * @Function		-	GIPO_WriteToOutputPin
+  *
+  * @brief			-	This Function disables or disables peripheral clock for the given GPIO port
+  *
+  * @param    		-	pGPIOx : GPIOx
+  *
+  * @param    		-	PinNumber
+  *
+  * @param    		-	Value 
+  *
+  * @retval			-	None
+  *
+  * @Note			-	None
+*/
 void GIPO_WriteToOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber, uint8_t Value)
 {
-
+	if (Value == GPIO_PIN_SET)
+	{
+		// Write 1 to the ouput data registers at the bit field corresponding to the pin
+		pGPIOx->ODR |= (1 << PinNumber);
+	}else
+	{
+		// Write 0 to the ouput data registers at the bit field corresponding to the pin
+		pGPIOx->ODR &= ~(1 << PinNumber);
+	}
 }
+
+/****************************************************************************************************
+  * @Function		-	GIPO_WriteToOutputPort
+  *
+  * @brief			-	This Function disables or disables peripheral clock for the given GPIO port
+  *
+  * @param    		-	pGPIOx : GPIOx
+  *
+  *
+  * @param    		-	Value
+  *
+  * @retval			-	None
+  *
+  * @Note			-	None
+*/
+
 void GIPO_WriteToOutputPort(GPIO_RegDef_t *pGPIOx, uint16_t Value)
 {
-
+	pGPIOx->ODR = Value;
 }
+
+/****************************************************************************************************
+  * @Function		-	GIPO_ToggleOutputPin
+  *
+  * @brief			-	This Function disables or disables peripheral clock for the given GPIO port
+  *
+  * @param    		-	pGPIOx : GPIOx
+  *
+  * @param    		-	PinNumber
+  *
+  *
+  * @retval			-	None
+  *
+  * @Note			-	None
+*/
 void GIPO_ToggleOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber)
 {
-
+	pGPIOx->ODR ^= (1 << PinNumber);
 }
 
 /*
