@@ -25,7 +25,7 @@ typedef struct
 typedef	struct
 {
 	GPIO_RegDef_t 		*pGPIOx;		/*!< This holds the base adrress of the GPIO port to which the pin belongs >*/
-	GPIO_PinConfig_t	GIPO_PinConfig;	/*!<This holds GPIO pin configuration settings >*/
+	GPIO_PinConfig_t	GPIO_PinConfig;	/*!<This holds GPIO pin configuration settings >*/
 }GPIO_Handle_t;
 
 /*
@@ -92,29 +92,30 @@ typedef	struct
 /*
  * Peripheral Clock Setup
  */
-void GIPO_PeriperalClockControl(GPIO_RegDef_t *pGPIOx, uint8_t ENorDIS);
+void GPIO_PeriperalClockControl(GPIO_RegDef_t *pGPIOx, uint8_t ENorDIS);
 
 
 /*
- * Init and DeInit
+ * Init and De-init
  */
-void GIPO_Init(GPIO_Handle_t *pGPIOHanlde);
-void GIPO_DeInit(GPIO_RegDef_t *pGPIOx);
+void GPIO_Init(GPIO_Handle_t *pGPIOHanlde);
+void GPIO_DeInit(GPIO_RegDef_t *pGPIOx);
 
 /*
  * Data Read and Write
  */
-uint8_t GIPO_ReadFromInputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber);
-uint16_t GIPO_ReadFromInputPort(GPIO_RegDef_t *pGPIOx);
-void GIPO_WriteToOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber, uint8_t Value);
-void GIPO_WriteToOutputPort(GPIO_RegDef_t *pGPIOx, uint16_t Value);
-void GIPO_ToggleOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber);
+uint8_t GPIO_ReadFromInputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber);
+uint16_t GPIO_ReadFromInputPort(GPIO_RegDef_t *pGPIOx);
+void GPIO_WriteToOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber, uint8_t Value);
+void GPIO_WriteToOutputPort(GPIO_RegDef_t *pGPIOx, uint16_t Value);
+void GPIO_ToggleOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber);
 
 /*
  * IRQ Configuration and ISR handling
  */
-void GIPO_IRQConfig(uint8_t IRQNumber, uint8_t IRQPriority, uint8_t ENorDIS);
-void GIPO_IRQHandling(uint8_t PinNumber);
+void GPIO_IRQInterruptConfig(uint8_t IRQNumber, uint8_t ENorDIS);
+void GPIO_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
+void GPIO_IRQHandling(uint8_t PinNumber);
 
 
 #endif /* INC_STM32F407XX_GPIO_DRIVER_H_ */
