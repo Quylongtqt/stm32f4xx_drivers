@@ -9,8 +9,10 @@
 #define INC_STM32F407XX_H_
 
 #include <stdio.h>
+#include <stdint.h>
+#include <stddef.h>
 
-
+#define __weak __attribute__((weak))
 /********************** START : Processor Specific Deatils  ************************/
 /*
  * ARM Cotex Mx Processor NVIC ISERx registers Address
@@ -373,6 +375,9 @@ typedef struct
 #define IRQ_NO_EXTI9_5		23
 #define IRQ_NO_EXTI15_10	40
 
+#define IRQ_NO_SPI1			35
+#define IRQ_NO_SPI2			36
+#define IRQ_NO_SPI3			51
 /*
  * Macros for all the possible priority levels
  */
