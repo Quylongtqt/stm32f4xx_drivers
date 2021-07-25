@@ -143,7 +143,7 @@
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Inc"/>
                         						
-                        <entry excluding="006_SPI_Tx_Testing.c|main.c|005_Button_Interrupt.c|002_LED_Button.c|001_LED_Toggle.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Src"/>
+                        <entry excluding="009_SPI_Message_Rcv_IT.c|006_SPI_Tx_Testing.c|005_Button_Interrupt.c|002_LED_Button.c|001_LED_Toggle.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Src"/>
                         						
                         <entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Startup"/>
                         						

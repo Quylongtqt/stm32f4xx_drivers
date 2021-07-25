@@ -13,6 +13,8 @@
 #include <stddef.h>
 
 #define __weak __attribute__((weak))
+
+
 /********************** START : Processor Specific Deatils  ************************/
 /*
  * ARM Cotex Mx Processor NVIC ISERx registers Address
@@ -222,6 +224,66 @@ typedef struct
 }SPI_RegDef_t;
 
 /*
+ * peripheral register definition structure for CAN
+ */
+
+typedef enum {RESET = 0, SET = !RESET} FlagStatus, ITStatus;
+
+typedef enum {DISABLE = 0, ENABLE = !DISABLE} FunctionalState;
+#define IS_FUNCTIONAL_STATE(STATE) (((STATE) == DISABLE) || ((STATE) == ENABLE))
+
+typedef enum {ERROR = 0, SUCCESS = !ERROR} ErrorStatus;
+
+typedef struct
+{
+	volatile uint32_t TIR;  /*!< CAN TX mailbox identifier register */
+	volatile uint32_t TDTR; /*!< CAN mailbox data length control and time stamp register */
+	volatile uint32_t TDLR; /*!< CAN mailbox data low register */
+	volatile uint32_t TDHR; /*!< CAN mailbox data high register */
+} CAN_TxMailBox_TypeDef;
+
+typedef struct
+{
+	volatile uint32_t RIR;  /*!< CAN receive FIFO mailbox identifier register */
+	volatile uint32_t RDTR; /*!< CAN receive FIFO mailbox data length control and time stamp register */
+	volatile uint32_t RDLR; /*!< CAN receive FIFO mailbox data low register */
+	volatile uint32_t RDHR; /*!< CAN receive FIFO mailbox data high register */
+} CAN_FIFOMailBox_TypeDef;
+
+typedef struct
+{
+	volatile uint32_t FR1; /*!< CAN Filter bank register 1 */
+	volatile uint32_t FR2; /*!< CAN Filter bank register 1 */
+} CAN_FilterRegister_TypeDef;
+
+typedef struct
+{
+	volatile uint32_t			MCR;                 /*!< CAN master control register,         Address offset: 0x00          */
+	volatile uint32_t			MSR;                 /*!< CAN master status register,          Address offset: 0x04          */
+	volatile uint32_t			TSR;                 /*!< CAN transmit status register,        Address offset: 0x08          */
+	volatile uint32_t			RF0R;                /*!< CAN receive FIFO 0 register,         Address offset: 0x0C          */
+	volatile uint32_t			RF1R;                /*!< CAN receive FIFO 1 register,         Address offset: 0x10          */
+	volatile uint32_t			IER;                 /*!< CAN interrupt enable register,       Address offset: 0x14          */
+	volatile uint32_t			ESR;                 /*!< CAN error status register,           Address offset: 0x18          */
+	volatile uint32_t			BTR;                 /*!< CAN bit timing register,             Address offset: 0x1C          */
+	uint32_t                    RESERVED0[88];       /*!< Reserved, 0x020 - 0x17F                                            */
+	CAN_TxMailBox_TypeDef       sTxMailBox[3];       /*!< CAN Tx MailBox,                      Address offset: 0x180 - 0x1AC */
+	CAN_FIFOMailBox_TypeDef     sFIFOMailBox[2];     /*!< CAN FIFO MailBox,                    Address offset: 0x1B0 - 0x1CC */
+	uint32_t                    RESERVED1[12];       /*!< Reserved, 0x1D0 - 0x1FF                                            */
+	volatile uint32_t			FMR;                 /*!< CAN filter master register,          Address offset: 0x200         */
+	volatile uint32_t			FM1R;                /*!< CAN filter mode register,            Address offset: 0x204         */
+	uint32_t					RESERVED2;           /*!< Reserved, 0x208                                                    */
+	volatile uint32_t			FS1R;                /*!< CAN filter scale register,           Address offset: 0x20C         */
+	uint32_t                    RESERVED3;           /*!< Reserved, 0x210                                                    */
+	volatile uint32_t			FFA1R;               /*!< CAN filter FIFO assignment register, Address offset: 0x214         */
+	uint32_t					RESERVED4;           /*!< Reserved, 0x218                                                    */
+	volatile uint32_t			FA1R;                /*!< CAN filter activation register,      Address offset: 0x21C         */
+	uint32_t					RESERVED5[8];        /*!< Reserved, 0x220-0x23F                                              */
+	CAN_FilterRegister_TypeDef	sFilterRegister[28]; /*!< CAN Filter Register,                 Address offset: 0x240-0x31C   */
+}CAN_RegDef_t;
+
+
+/*
  * peripheral definitions
  */
 
@@ -242,6 +304,10 @@ typedef struct
 #define SPI1				((SPI_RegDef_t*)SPI1_BASEADDR)
 #define SPI2				((SPI_RegDef_t*)SPI2_BASEADDR)
 #define SPI3				((SPI_RegDef_t*)SPI3_BASEADDR)
+
+
+#define CAN1				((CAN_RegDef_t*)CAN1_BASEADDR)
+#define CAN2				((CAN_RegDef_t*)CAN2_BASEADDR)
 
 /*
  * Clock Enable Macros for GPIOx peripherals
@@ -272,6 +338,13 @@ typedef struct
 #define SPI1_PCLK_EN()		( RCC->APB2ENR |= (1 << 12) )
 #define SPI2_PCLK_EN()		( RCC->APB1ENR |= (1 << 14) )
 #define SPI3_PCLK_EN()		( RCC->APB1ENR |= (1 << 15) )
+
+/*
+ * Clock Enable Macros for CANx peripherals
+ */
+
+#define CAN1_PCLK_EN()		( RCC->APB1ENR |= (1 << 25) )
+#define CAN2_PCLK_EN()		( RCC->APB1ENR |= (1 << 26) )
 
 /*
  * Clock Enable Macros for USARTx peripherals
@@ -346,9 +419,17 @@ typedef struct
  * Reset SPIx peripheral Macros
  */
 
-#define SPI1_REG_RESET()		do{(RCC->AHB2RSTR |= (1 << 12)); (RCC->AHB2RSTR &= ~(1 << 12));}while(0)
+#define SPI1_REG_RESET()		do{(RCC->APB2RSTR |= (1 << 12)); (RCC->APB2RSTR &= ~(1 << 12));}while(0)
 #define SPI2_REG_RESET()		do{(RCC->APB1RSTR |= (1 << 14)); (RCC->APB1RSTR &= ~(1 << 14));}while(0)
 #define SPI3_REG_RESET()		do{(RCC->APB1RSTR |= (1 << 15)); (RCC->APB1RSTR &= ~(1 << 15));}while(0)
+
+/*
+ * Reset CANx peripheral Macros
+ */
+/* Enable CAN1 reset state and after that Release CAN1 from reset state */
+#define CAN1_REG_RESET()		do{(RCC->APB2RSTR |= (1 << 25)); (RCC->APB2RSTR &= ~(1 << 25));}while(0)
+/* Enable CAN2 reset state and after that Release CAN2 from reset state */
+#define CAN2_REG_RESET()		do{(RCC->APB1RSTR |= (1 << 26)); (RCC->APB1RSTR &= ~(1 << 26));}while(0)
 
 /*
  * EXTIx configuration
@@ -437,5 +518,34 @@ typedef struct
 #define SPI_SR_OVR			6
 #define SPI_SR_TBSY			7
 #define SPI_SR_TIFRFE		8
+
+/******************************************************************************/
+/*                                                                            */
+/*                         Controller Area Network                            */
+/*                                                                            */
+/******************************************************************************/
+/*!<CAN control and status registers */
+/*******************  Bit definition for CAN_MCR register  ********************/
+#define  CAN_MCR_INRQ                        ((uint16_t)0x0001)            /*!<Initialization Request */
+#define  CAN_MCR_SLEEP                       ((uint16_t)0x0002)            /*!<Sleep Mode Request */
+#define  CAN_MCR_TXFP                        ((uint16_t)0x0004)            /*!<Transmit FIFO Priority */
+#define  CAN_MCR_RFLM                        ((uint16_t)0x0008)            /*!<Receive FIFO Locked Mode */
+#define  CAN_MCR_NART                        ((uint16_t)0x0010)            /*!<No Automatic Retransmission */
+#define  CAN_MCR_AWUM                        ((uint16_t)0x0020)            /*!<Automatic Wakeup Mode */
+#define  CAN_MCR_ABOM                        ((uint16_t)0x0040)            /*!<Automatic Bus-Off Management */
+#define  CAN_MCR_TTCM                        ((uint16_t)0x0080)            /*!<Time Triggered Communication Mode */
+#define  CAN_MCR_RESET                       ((uint16_t)0x8000)            /*!<bxCAN software master reset */
+
+/*******************  Bit definition for CAN_MSR register  ********************/
+#define  CAN_MSR_INAK                        ((uint16_t)0x0001)            /*!<Initialization Acknowledge */
+#define  CAN_MSR_SLAK                        ((uint16_t)0x0002)            /*!<Sleep Acknowledge */
+#define  CAN_MSR_ERRI                        ((uint16_t)0x0004)            /*!<Error Interrupt */
+#define  CAN_MSR_WKUI                        ((uint16_t)0x0008)            /*!<Wakeup Interrupt */
+#define  CAN_MSR_SLAKI                       ((uint16_t)0x0010)            /*!<Sleep Acknowledge Interrupt */
+#define  CAN_MSR_TXM                         ((uint16_t)0x0100)            /*!<Transmit Mode */
+#define  CAN_MSR_RXM                         ((uint16_t)0x0200)            /*!<Receive Mode */
+#define  CAN_MSR_SAMP                        ((uint16_t)0x0400)            /*!<Last Sample Point */
+#define  CAN_MSR_RX                          ((uint16_t)0x0800)            /*!<CAN Rx Signal */
+
 
 #endif /* INC_STM32F407XX_H_ */
