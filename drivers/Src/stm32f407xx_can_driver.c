@@ -986,16 +986,609 @@ uint8_t CAN_WakeUp(CAN_RegDef_t* CANx)
 	return (uint8_t)wakeupstatus;
 }
 
-/* CAN Bus Error management functions *****************************************/
-uint8_t CAN_GetLastErrorCode(CAN_RegDef_t* CANx);
-uint8_t CAN_GetReceiveErrorCounter(CAN_RegDef_t* CANx);
-uint8_t CAN_GetLSBTransmitErrorCounter(CAN_RegDef_t* CANx);
+/*
+===============================================================================
+                ##### CAN Bus Error management functions #####
+ ===============================================================================
+    [..] This section provides functions allowing to
+      (+) Return the CANx's last error code (LEC)
+      (+) Return the CANx Receive Error Counter (REC)
+      (+) Return the LSB of the 9-bit CANx Transmit Error Counter(TEC).
 
-/* Interrupts and flags management functions **********************************/
-void CAN_ITConfig(CAN_RegDef_t* CANx, uint32_t CAN_IT, FunctionalState NewState);
-FlagStatus CAN_GetFlagStatus(CAN_RegDef_t* CANx, uint32_t CAN_FLAG);
-void CAN_ClearFlag(CAN_RegDef_t* CANx, uint32_t CAN_FLAG);
-ITStatus CAN_GetITStatus(CAN_RegDef_t* CANx, uint32_t CAN_IT);
-void CAN_ClearITPendingBit(CAN_RegDef_t* CANx, uint32_t CAN_IT);
-static ITStatus CheckITStatus(uint32_t CAN_Reg, uint32_t It_Bit);
+      -@- If TEC is greater than 255, The CAN is in bus-off state.
+      -@- if REC or TEC are greater than 96, an Error warning flag occurs.
+      -@- if REC or TEC are greater than 127, an Error Passive Flag occurs.
+*/
+
+/****************************************************************************************************
+  * @function		-	CAN_GetLastErrorCode
+  *
+  * @brief			-	This Function Returns the CANx's last error code (LEC).
+  *
+  * @param[in]    	-	CANx: where x can be 1 or 2 to to select the CAN peripheral.
+  *
+  * @retval			-	Error code:
+  *         			 - CAN_ERRORCODE_NoErr: No Error
+  *         			 - CAN_ERRORCODE_StuffErr: Stuff Error
+  *         			 - CAN_ERRORCODE_FormErr: Form Error
+  *         			 - CAN_ERRORCODE_ACKErr : Acknowledgment Error
+  *        				 - CAN_ERRORCODE_BitRecessiveErr: Bit Recessive Error
+  *         			 - CAN_ERRORCODE_BitDominantErr: Bit Dominant Error
+  *        				 - CAN_ERRORCODE_CRCErr: CRC Error
+  *         			 - CAN_ERRORCODE_SoftwareSetErr: Software Set Error
+  *
+  * @Note			-	None
+  */
+uint8_t CAN_GetLastErrorCode(CAN_RegDef_t* CANx)
+{
+	uint8_t errorcode = 0;
+	/* Check the parameters */
+	assert_param(IS_CAN_ALL_PERIPH(CANx));
+
+	/* Get error code */
+	errorcode = ((uint8_t)(CANx->ESR) & (uint8_t)CAN_ESR_LEC);
+
+	/* Return the error code*/
+	return errorcode;
+}
+
+/****************************************************************************************************
+  * @function		-	CAN_GetReceiveErrorCounter
+  *
+  * @brief			-	This Function Returns the CANx Receive Error Counter (REC).
+  *
+  * @param[in]    	-	CANx: where x can be 1 or 2 to to select the CAN peripheral.
+  *
+  * @retval			-	CAN Receive Error Counter.
+  *
+  * @Note			-	In case of an error during reception, this counter is incremented
+  *        				by 1 or by 8 depending on the error condition as defined by the CAN
+  *         			standard. After every successful reception, the counter is
+  *         			decremented by 1 or reset to 120 if its value was higher than 128.
+  *         			When the counter value exceeds 127, the CAN controller enters the
+  *         			error passive state.
+  */
+uint8_t CAN_GetReceiveErrorCounter(CAN_RegDef_t* CANx)
+{
+	unit8_t counter = 0;
+	/* Check the parameters */
+	assert_param(IS_CAN_ALL_PERIPH(CANx));
+
+	/* Get receive Error Counter */
+	counter = (uint8_t)((CANx->ESR & CAN_ESR_REC) >> 24);
+
+	/* Return the Receive Error Counter */
+	return counter;
+}
+
+/****************************************************************************************************
+  * @function		-	CAN_GetLSBTransmitErrorCounter
+  *
+  * @brief			-	This Function Returns the LSB of the 9-bit CANx Transmit Error Counter(TEC).
+  *
+  * @param[in]    	-	CANx: where x can be 1 or 2 to to select the CAN peripheral.
+  *
+  * @retval			-	LSB of the 9-bit CAN Transmit Error Counter.
+  *
+  * @Note			-	None
+  */
+uint8_t CAN_GetLSBTransmitErrorCounter(CAN_RegDef_t* CANx)
+{
+	unit8_t counter = 0;
+	/* Check the parameters */
+	assert_param(IS_CAN_ALL_PERIPH(CANx));
+
+	/* Get LSB of the 9-bit CANx Transmit Error Counter(TEC) */
+	counter = (uint8_t)((CANx->ESR & CAN_ESR_TEC) >> 16);
+
+	/* Return the LSB of the 9-bit CANx Transmit Error Counter(TEC) */
+	return counter;
+}
+
+/*
+===============================================================================
+              ##### Interrupts and flags management functions #####
+ ===============================================================================
+
+     [..] This section provides functions allowing to configure the CAN Interrupts
+          and to get the status and clear flags and Interrupts pending bits.
+
+          The CAN provides 14 Interrupts sources and 15 Flags:
+
+
+  *** Flags ***
+  =============
+    [..] The 15 flags can be divided on 4 groups:
+
+      (+) Transmit Flags
+        (++) CAN_FLAG_RQCP0,
+        (++) CAN_FLAG_RQCP1,
+        (++) CAN_FLAG_RQCP2  : Request completed MailBoxes 0, 1 and 2  Flags
+                               Set when when the last request (transmit or abort)
+                               has been performed.
+
+      (+) Receive Flags
+
+
+        (++) CAN_FLAG_FMP0,
+        (++) CAN_FLAG_FMP1   : FIFO 0 and 1 Message Pending Flags
+                               set to signal that messages are pending in the receive
+                               FIFO.
+                               These Flags are cleared only by hardware.
+
+        (++) CAN_FLAG_FF0,
+        (++) CAN_FLAG_FF1    : FIFO 0 and 1 Full Flags
+                               set when three messages are stored in the selected
+                               FIFO.
+
+        (++) CAN_FLAG_FOV0
+        (++) CAN_FLAG_FOV1   : FIFO 0 and 1 Overrun Flags
+                               set when a new message has been received and passed
+                               the filter while the FIFO was full.
+
+      (+) Operating Mode Flags
+
+        (++) CAN_FLAG_WKU    : Wake up Flag
+                               set to signal that a SOF bit has been detected while
+                               the CAN hardware was in Sleep mode.
+
+        (++) CAN_FLAG_SLAK   : Sleep acknowledge Flag
+                               Set to signal that the CAN has entered Sleep Mode.
+
+      (+) Error Flags
+
+        (++) CAN_FLAG_EWG    : Error Warning Flag
+                               Set when the warning limit has been reached (Receive
+                               Error Counter or Transmit Error Counter greater than 96).
+                               This Flag is cleared only by hardware.
+
+        (++) CAN_FLAG_EPV    : Error Passive Flag
+                               Set when the Error Passive limit has been reached
+                               (Receive Error Counter or Transmit Error Counter
+                               greater than 127).
+                               This Flag is cleared only by hardware.
+
+        (++) CAN_FLAG_BOF    : Bus-Off Flag
+                               set when CAN enters the bus-off state. The bus-off
+                               state is entered on TEC overflow, greater than 255.
+                               This Flag is cleared only by hardware.
+
+        (++) CAN_FLAG_LEC    : Last error code Flag
+                               set If a message has been transferred (reception or
+                               transmission) with error, and the error code is hold.
+
+  *** Interrupts ***
+  ==================
+    [..] The 14 interrupts can be divided on 4 groups:
+
+      (+) Transmit interrupt
+
+        (++) CAN_IT_TME   :  Transmit mailbox empty Interrupt
+                             if enabled, this interrupt source is pending when
+                             no transmit request are pending for Tx mailboxes.
+
+      (+) Receive Interrupts
+
+        (++) CAN_IT_FMP0,
+        (++) CAN_IT_FMP1    :  FIFO 0 and FIFO1 message pending Interrupts
+                               if enabled, these interrupt sources are pending
+                               when messages are pending in the receive FIFO.
+                               The corresponding interrupt pending bits are cleared
+                               only by hardware.
+
+        (++) CAN_IT_FF0,
+        (++) CAN_IT_FF1     :  FIFO 0 and FIFO1 full Interrupts
+                               if enabled, these interrupt sources are pending
+                               when three messages are stored in the selected FIFO.
+
+        (++) CAN_IT_FOV0,
+        (++) CAN_IT_FOV1    :  FIFO 0 and FIFO1 overrun Interrupts
+                               if enabled, these interrupt sources are pending
+                               when a new message has been received and passed
+                               the filter while the FIFO was full.
+
+      (+) Operating Mode Interrupts
+
+        (++) CAN_IT_WKU     :  Wake-up Interrupt
+                               if enabled, this interrupt source is pending when
+                               a SOF bit has been detected while the CAN hardware
+                               was in Sleep mode.
+
+        (++) CAN_IT_SLK     :  Sleep acknowledge Interrupt
+                               if enabled, this interrupt source is pending when
+                               the CAN has entered Sleep Mode.
+
+      (+) Error Interrupts
+
+        (++) CAN_IT_EWG     :  Error warning Interrupt
+                               if enabled, this interrupt source is pending when
+                               the warning limit has been reached (Receive Error
+                               Counter or Transmit Error Counter=96).
+
+        (++) CAN_IT_EPV     :  Error passive Interrupt
+                               if enabled, this interrupt source is pending when
+                               the Error Passive limit has been reached (Receive
+                               Error Counter or Transmit Error Counter>127).
+
+        (++) CAN_IT_BOF     :  Bus-off Interrupt
+                               if enabled, this interrupt source is pending when
+                               CAN enters the bus-off state. The bus-off state is
+                               entered on TEC overflow, greater than 255.
+                               This Flag is cleared only by hardware.
+
+        (++) CAN_IT_LEC     :  Last error code Interrupt
+                               if enabled, this interrupt source is pending  when
+                               a message has been transferred (reception or
+                               transmission) with error, and the error code is hold.
+
+        (++) CAN_IT_ERR     :  Error Interrupt
+                               if enabled, this interrupt source is pending when
+                               an error condition is pending.
+
+    [..] Managing the CAN controller events :
+
+         The user should identify which mode will be used in his application to
+         manage the CAN controller events: Polling mode or Interrupt mode.
+
+      (#) In the Polling Mode it is advised to use the following functions:
+        (++) CAN_GetFlagStatus() : to check if flags events occur.
+        (++) CAN_ClearFlag()     : to clear the flags events.
+
+
+
+      (#) In the Interrupt Mode it is advised to use the following functions:
+        (++) CAN_ITConfig()       : to enable or disable the interrupt source.
+        (++) CAN_GetITStatus()    : to check if Interrupt occurs.
+        (++) CAN_ClearITPendingBit() : to clear the Interrupt pending Bit
+            (corresponding Flag).
+        -@@-  This function has no impact on CAN_IT_FMP0 and CAN_IT_FMP1 Interrupts
+             pending bits since there are cleared only by hardware.
+*/
+
+/****************************************************************************************************
+ * @function		-	CAN_ITConfig
+ *
+ * @brief			-	This Function Checks the transmission status of a CAN Frame.
+ *
+ * @param[in]    	-	CANx: where x can be 1 or 2 to to select the CAN peripheral.
+ *
+ * @param[in]    	-	CAN_IT: specifies the CAN interrupt sources to be enabled or disabled.
+ *
+ * 						This parameter can be:
+ * 							 @arg CAN_IT_TME: Transmit mailbox empty Interrupt
+ *							 @arg CAN_IT_TME: Transmit mailbox empty Interrupt
+ *           			     @arg CAN_IT_FMP0: FIFO 0 message pending Interrupt
+ *          				 @arg CAN_IT_FF0: FIFO 0 full Interrupt
+ *          				 @arg CAN_IT_FOV0: FIFO 0 overrun Interrupt
+ *          				 @arg CAN_IT_FMP1: FIFO 1 message pending Interrupt
+ *          				 @arg CAN_IT_FF1: FIFO 1 full Interrupt
+ *           				 @arg CAN_IT_FOV1: FIFO 1 overrun Interrupt
+ *          				 @arg CAN_IT_WKU: Wake-up Interrupt
+ *          				 @arg CAN_IT_SLK: Sleep acknowledge Interrupt
+ *           			 	 @arg CAN_IT_EWG: Error warning Interrupt
+ *           				 @arg CAN_IT_EPV: Error passive Interrupt
+ *          				 @arg CAN_IT_BOF: Bus-off Interrupt
+ *           				 @arg CAN_IT_LEC: Last error code Interrupt
+ *          				 @arg CAN_IT_ERR: Error Interrupt
+ *
+ * @param[in]    	-	NewState: new state of the CAN interrupts. ENABLE or DISABLE.
+ *
+ * @retval			-	None
+ *
+ * @Note			-	None
+ */
+
+void CAN_ITConfig(CAN_RegDef_t* CANx, uint32_t CAN_IT, FunctionalState NewState)
+{
+	/* Check the parameters */
+	assert_param(IS_CAN_ALL_PERIPH(CANx));
+	assert_param(IS_CAN_IT(CAN_IT));
+	assert_param(IS_FUNCTIONAL_STATE(NewState));
+
+	if(NewState != DISABLE)
+	{
+		CANx->IER |= CAN_IT;
+	}else
+	{
+		CANx->IER &= ~CAN_IT;
+	}
+}
+
+/****************************************************************************************************
+ * @function		-	CAN_GetFlagStatus
+ *
+ * @brief			-	This Function Checks whether the specified CAN flag is set or not.
+ *
+ * @param[in]    	-	CANx: where x can be 1 or 2 to to select the CAN peripheral.
+ *
+ * @param[in]    	-	CAN_FLAG: specifies the flag to check.
+ *
+ * 						This parameter can be:
+ *            				 @arg CAN_FLAG_RQCP0: Request MailBox0 Flag
+ *           				 @arg CAN_FLAG_RQCP1: Request MailBox1 Flag
+ *            				 @arg CAN_FLAG_RQCP2: Request MailBox2 Flag
+ *           				 @arg CAN_FLAG_FMP0: FIFO 0 Message Pending Flag
+ *           				 @arg CAN_FLAG_FF0: FIFO 0 Full Flag
+ *           				 @arg CAN_FLAG_FOV0: FIFO 0 Overrun Flag
+ *           				 @arg CAN_FLAG_FMP1: FIFO 1 Message Pending Flag
+ *           				 @arg CAN_FLAG_FF1: FIFO 1 Full Flag
+ *            				 @arg CAN_FLAG_FOV1: FIFO 1 Overrun Flag
+ *         			   	 	 @arg CAN_FLAG_WKU: Wake up Flag
+ *            				 @arg CAN_FLAG_SLAK: Sleep acknowledge Flag
+ *           				 @arg CAN_FLAG_EWG: Error Warning Flag
+ *           				 @arg CAN_FLAG_EPV: Error Passive Flag
+ *           				 @arg CAN_FLAG_BOF: Bus-Off Flag
+ *           				 @arg CAN_FLAG_LEC: Last error code Flag
+ * @retval			-	The new state of CAN_FLAG (SET or RESET).
+ *
+ * @Note			-	None
+ */
+
+FlagStatus CAN_GetFlagStatus(CAN_RegDef_t* CANx, uint32_t CAN_FLAG)
+{
+	FlagStatus bitstatus = RESET;
+
+	/* Check the parameters */
+	assert_param(IS_CAN_ALL_PERIPH(CANx));
+	assert_param(IS_CAN_GET_FLAG(CAN_FLAG));
+
+	/* Flags in ESR register */
+	if((CAN_FLAG & CAN_FLAGS_ESR) != (uint32_t)RESET)
+	{
+		/* Check the status of the specified CAN flag */
+		if((CANx->ESR & (CAN_FLAG & 0x000FFFFF)) != (uint32_t)RESET)
+		{
+			/* CAN_FLAG is set */
+			bitstatus = SET;
+		}else
+		{
+			/* CAN_FLAG is reset */
+			bitstatus = RESET;
+		}
+
+	}else if((CAN_FLAG & CAN_FLAGS_MSR) != (uint32_t)RESET)
+	{
+		/* Check the status of the specified CAN flag */
+		if((CANx->MSR & (CAN_FLAG & 0x000FFFFF)) != (uint32_t)RESET)
+		{
+			/* CAN_FLAG is set */
+			bitstatus = SET;
+		}else
+		{
+			/* CAN_FLAG is reset */
+			bitstatus = RESET;
+		}
+	}else if((CAN_FLAG & CAN_FLAGS_TSR) != (uint32_t)RESET)
+	{
+		/* Check the status of the specified CAN flag */
+		if((CANx->TSR & (CAN_FLAG & 0x000FFFFF)) != (uint32_t)RESET)
+		{
+			/* CAN_FLAG is set */
+			bitstatus = SET;
+		}else
+		{
+			/* CAN_FLAG is reset */
+			bitstatus = RESET;
+		}
+	}else if((CAN_FLAG & CAN_FLAGS_RF0R) != (uint32_t)RESET)
+	{
+		/* Check the status of the specified CAN flag */
+		if((CANx->RF0R & (CAN_FLAG & 0x000FFFFF)) != (uint32_t)RESET)
+		{
+			/* CAN_FLAG is set */
+			bitstatus = SET;
+		}else
+		{
+			/* CAN_FLAG is reset */
+			bitstatus = RESET;
+		}
+	}else /* if((CAN_FLAG & CAN_FLAGS_RF1R) != (uint32_t)RESET) */
+	{
+		/* Check the status of the specified CAN flag */
+		if((CANx->RF1R & (CAN_FLAG & 0x000FFFFF)) != (uint32_t)RESET)
+		{
+			/* CAN_FLAG is set */
+			bitstatus = SET;
+		}else
+		{
+			/* CAN_FLAG is reset */
+			bitstatus = RESET;
+		}
+	}
+	/* Return the CAN_FLAG status */
+	return  bitstatus;
+}
+
+/****************************************************************************************************
+ * @function		-	CAN_ClearFlag
+ *
+ * @brief			-	This Function Clears the CAN's pending flags.
+ *
+ * @param[in]    	-	CANx: where x can be 1 or 2 to to select the CAN peripheral.
+ *
+ * @param[in]    	-	CAN_FLAG: specifies the flag to check.
+ *
+ * 						This parameter can be:
+ *            				 @arg CAN_FLAG_RQCP0: Request MailBox0 Flag
+ *           				 @arg CAN_FLAG_RQCP1: Request MailBox1 Flag
+ *            				 @arg CAN_FLAG_RQCP2: Request MailBox2 Flag
+ *           				 @arg CAN_FLAG_FMP0: FIFO 0 Message Pending Flag
+ *           				 @arg CAN_FLAG_FF0: FIFO 0 Full Flag
+ *           				 @arg CAN_FLAG_FOV0: FIFO 0 Overrun Flag
+ *           				 @arg CAN_FLAG_FMP1: FIFO 1 Message Pending Flag
+ *           				 @arg CAN_FLAG_FF1: FIFO 1 Full Flag
+ *            				 @arg CAN_FLAG_FOV1: FIFO 1 Overrun Flag
+ *         			   	 	 @arg CAN_FLAG_WKU: Wake up Flag
+ *            				 @arg CAN_FLAG_SLAK: Sleep acknowledge Flag
+ *           				 @arg CAN_FLAG_EWG: Error Warning Flag
+ *           				 @arg CAN_FLAG_EPV: Error Passive Flag
+ *           				 @arg CAN_FLAG_BOF: Bus-Off Flag
+ *           				 @arg CAN_FLAG_LEC: Last error code Flag
+ * @retval			-	None
+ *
+ * @Note			-	None
+ */
+void CAN_ClearFlag(CAN_RegDef_t* CANx, uint32_t CAN_FLAG)
+{
+	uint32_t flagtmp=0;
+	/* Check the parameters */
+	assert_param(IS_CAN_ALL_PERIPH(CANx));
+	assert_param(IS_CAN_CLEAR_FLAG(CAN_FLAG));
+	if(CAN_FLAG == CAN_FLAG_LEC) /* ESR register */
+	{
+		/* Clear the selected CAN flags */
+		CANx->ESR = (uint32_t)RESET;
+	}else /* MSR or TSR or RF0R or RF1R */
+	{
+		flagtmp = CAN_FLAG & 0x000FFFFF;
+		if ((CAN_FLAG & CAN_FLAGS_RF0R)!=(uint32_t)RESET)
+		{
+			/* Receive Flags */
+			CANx->RF0R = (uint32_t)(flagtmp);
+		}else if((CAN_FLAG & CAN_FLAGS_RF01R)!=(uint32_t)RESET)
+		{
+			/* Receive Flags */
+			CANx->RF1R = (uint32_t)(flagtmp);
+		}else if((CAN_FLAG & CAN_FLAGS_TSR)!=(uint32_t)RESET)
+		{
+			/* Transmit Flags */
+			CANx->TSR = (uint32_t)(flagtmp);
+		}else /* if((CAN_FLAG & CAN_FLAGS_MSR)!=(uint32_t)RESET) */
+		{
+			/* Operating mode Flags */
+			CANx->MSR = (uint32_t)(flagtmp);
+		}
+	}
+}
+
+/****************************************************************************************************
+ * @function		-	CAN_GetITStatus
+ *
+ * @brief			-	This Function CChecks whether the specified CANx interrupt has occurred or not.
+ *
+ * @param  			-	CAN_IT: specifies the CAN interrupt source to check.
+ *          			This parameter can be one of the following values:
+ *           			 @arg CAN_IT_TME: Transmit mailbox empty Interrupt
+ *            			 @arg CAN_IT_FMP0: FIFO 0 message pending Interrupt
+ *            			 @arg CAN_IT_FF0: FIFO 0 full Interrupt
+ *           			 @arg CAN_IT_FOV0: FIFO 0 overrun Interrupt
+ *          			 @arg CAN_IT_FMP1: FIFO 1 message pending Interrupt
+ *           			 @arg CAN_IT_FF1: FIFO 1 full Interrupt
+ *           			 @arg CAN_IT_FOV1: FIFO 1 overrun Interrupt
+ *           			 @arg CAN_IT_WKU: Wake-up Interrupt
+ *           			 @arg CAN_IT_SLK: Sleep acknowledge Interrupt
+ *           			 @arg CAN_IT_EWG: Error warning Interrupt
+ *           			 @arg CAN_IT_EPV: Error passive Interrupt
+ *           			 @arg CAN_IT_BOF: Bus-off Interrupt
+ *           			 @arg CAN_IT_LEC: Last error code Interrupt
+ *            			 @arg CAN_IT_ERR: Error Interrupt
+ *
+ * @retval 			-	The current state of CAN_IT (SET or RESET).
+ *
+ * @Note			-	None
+ */
+
+ITStatus CAN_GetITStatus(CAN_RegDef_t* CANx, uint32_t CAN_IT)
+{
+	ITStatus itstatus = RESET;
+	/* Check the parameters */
+	assert_param(IS_CAN_ALL_PERIPH(CANx));
+	assert_param(IS_CAN_IT(CAN_IT));
+	/* check the interrupt enable bit */
+	if((CANx->IER & CAN_IT) != RESET)
+	{
+		/* in case the Interrupt is enabled, .... */
+		switch(CAN_IT)
+		{
+			case CAN_IT_TME:
+				/* Check CAN_TSR_RQCPx bits */
+				itstatus = CheckITStatus(CANx->TSR, CAN_TSR_RQCP0 | CAN_TSR_RQCP1 | CAN_TSR_RQCP2);
+				break;
+			case CAN_IT_FMP0:
+				/* Check CAN_RF0R_FMP0 bit */
+				itstatus = CheckITStatus(CANx->RF0R, CAN_RF0R_FMP0);
+				break;
+			case CAN_IT_FF0:
+				/* Check CAN_RF0R_FULL0 bit */
+				itstatus = CheckITStatus(CANx->RF0R, CAN_RF0R_FULL0);
+				break;
+			case CAN_IT_FOV0:
+				/* Check CAN_RF0R_FOVR0 bit */
+				itstatus = CheckITStatus(CANx->RF0R, CAN_RF0R_FOVR0);
+				break;
+			case CAN_IT_FMP1:
+				/* Check CAN_RF1R_FMP1 bit */
+				itstatus = CheckITStatus(CANx->RF1R, CAN_RF1R_FMP1);
+				break;
+			case CAN_IT_FF1:
+				/* Check CAN_RF1R_FULL1 bit */
+				itstatus = CheckITStatus(CANx->RF1R, CAN_RF1R_FMP1);
+				break;
+			case CAN_IT_FOV1:
+				/* Check CAN_RF1R_FOVR1 bit */
+				itstatus = CheckITStatus(CANx->RF1R, CAN_RF1R_FOVR1);
+				break;
+			case CAN_IT_WKU:
+				/* Check CAN_MSR_WKUI bit */
+				itstatus = CheckITStatus(CANx->MSR, CAN_MSR_WKUI);
+				break;
+			case CAN_IT_SLK:
+				/* Check CAN_MSR_SLAKI bit */
+				itstatus = CheckITStatus(CANx->MSR, CAN_MSR_SLAKI);
+				break;
+			case CAN_IT_EWG:
+				/* Check CAN_ESR_EWGF bit */
+				itstatus = CheckITStatus(CANx->ESR, CAN_ESR_EWGF);
+				break;
+			case CAN_IT_EPV:
+				/* Check CAN_ESR_EPVF bit */
+				itstatus = CheckITStatus(CANx->ESR, CAN_ESR_EPVF);
+				break;
+			case CAN_IT_BOF:
+				/* Check CAN_ESR_BOFF bit */
+				itstatus = CheckITStatus(CANx->ESR, CAN_ESR_BOFF);
+				break;
+			case CAN_IT_LEC:
+				/* Check CAN_ESR_LEC bit */
+				itstatus = CheckITStatus(CANx->ESR, CAN_ESR_LEC);
+				break;
+			case CAN_IT_ERR:
+				/* Check CAN_MSR_ERRI bit */
+				itstatus = CheckITStatus(CANx->MSR, CAN_MSR_ERRI);
+				break;
+			default:
+				/* in case of error, return RESET */
+				itstatus = RESET;
+				break;
+		}
+	}else
+	{
+		/* in case the Interrupt is not enabled, return RESET */
+		itstatus  = RESET;
+	}
+	/* Return the CAN_IT status */
+	return itstatus;
+}
+void CAN_ClearITPendingBit(CAN_RegDef_t* CANx, uint32_t CAN_IT)
+{
+
+}
+
+/****************************************************************************************************
+ * @function		-	CheckITStatus
+ *
+ * @brief			-	This Function Checks whether the CAN interrupt has occurred or not.
+ *
+ * @param[in]    	-	CANx: where x can be 1 or 2 to to select the CAN peripheral.
+ *
+ * @param[in]    	-	It_Bit: specifies the interrupt source bit to check.
+ *
+ * @retval			-	The new state of the CAN Interrupt (SET or RESET).
+ *
+ * @Note			-	None
+ */
+static ITStatus CheckITStatus(uint32_t CAN_Reg, uint32_t It_Bit)
+{
+
+}
 
