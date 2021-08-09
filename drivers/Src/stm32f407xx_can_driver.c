@@ -1569,9 +1569,100 @@ ITStatus CAN_GetITStatus(CAN_RegDef_t* CANx, uint32_t CAN_IT)
 	/* Return the CAN_IT status */
 	return itstatus;
 }
+
+/****************************************************************************************************
+ * @function		-	CAN_ClearITPendingBit
+ *
+ * @brief			-	This Function Clears the CANx's interrupt pending bits.
+ *
+ * @param[in]    	-	CANx: where x can be 1 or 2 to to select the CAN peripheral.
+ *
+ * @param[in]    	-	CAN_IT: specifies the interrupt pending bit to clear.
+ * 						This parameter can be one of the following values:
+ *            			@arg CAN_IT_TME: Transmit mailbox empty Interrupt
+ *            			@arg CAN_IT_FF0: FIFO 0 full Interrupt
+ *            			@arg CAN_IT_FOV0: FIFO 0 overrun Interrupt
+ *            			@arg CAN_IT_FF1: FIFO 1 full Interrupt
+ *            			@arg CAN_IT_FOV1: FIFO 1 overrun Interrupt
+ *            			@arg CAN_IT_WKU: Wake-up Interrupt
+ *            			@arg CAN_IT_SLK: Sleep acknowledge Interrupt
+ *            			@arg CAN_IT_EWG: Error warning Interrupt
+ *            			@arg CAN_IT_EPV: Error passive Interrupt
+ *            			@arg CAN_IT_BOF: Bus-off Interrupt
+ *            			@arg CAN_IT_LEC: Last error code Interrupt
+ *            			@arg CAN_IT_ERR: Error Interrupt
+ *
+ * @retval			-	None
+ *
+ * @Note			-	None
+ */
+
 void CAN_ClearITPendingBit(CAN_RegDef_t* CANx, uint32_t CAN_IT)
 {
-
+	/* Check the parameters */
+	  assert_param(IS_CAN_ALL_PERIPH(CANx));
+	  assert_param(IS_CAN_CLEAR_IT(CAN_IT));
+	  switch(CAN_IT)
+	  {
+		case CAN_IT_TME:
+			/* Clear CAN_TSR_RQCPx (rc_w1). Cleared by software writing a “1” */
+			CANx->TSR = CAN_TSR_RQCP0 | CAN_TSR_RQCP1 | CAN_TSR_RQCP2;
+			break;
+		case CAN_IT_FF0:
+			/* Clear CAN_RF0R_FULL0 (rc_w1)*/
+			CANx->RF0R = CAN_RF0R_FULL0;
+			break;
+		case CAN_IT_FOV0:
+			/* Clear CAN_RF0R_FOVR0 (rc_w1)*/
+			CANx->RF0R = CAN_RF0R_FOVR0;
+			break;
+		case CAN_IT_FF1:
+			/* Clear CAN_RF1R_FULL1 (rc_w1)*/
+			CANx->RF1R = CAN_RF1R_FULL1;
+			break;
+		case CAN_IT_FOV1:
+			/* Clear CAN_RF1R_FOVR1 (rc_w1)*/
+			CANx->RF1R = CAN_RF1R_FOVR1;
+			break;
+		case CAN_IT_WKU:
+			/* Clear CAN_MSR_WKUI (rc_w1)*/
+			CANx->MSR = CAN_MSR_WKUI;
+			break;
+		case CAN_IT_SLK:
+			/* Clear CAN_MSR_SLAKI (rc_w1)*/
+			CANx->MSR = CAN_MSR_SLAKI;
+			break;
+		case CAN_IT_EWG:
+			/* Clear CAN_MSR_ERRI (rc_w1) */
+			CANx->MSR = CAN_MSR_ERRI;
+			/* @note the corresponding Flag is cleared by hardware depending on the CAN Bus status*/
+			break;
+		case CAN_IT_EPV:
+			/* Clear CAN_MSR_ERRI (rc_w1) */
+			CANx->MSR = CAN_MSR_ERRI;
+			/* @note the corresponding Flag is cleared by hardware depending on the CAN Bus status*/
+			break;
+		case CAN_IT_BOF:
+			/* Clear CAN_MSR_ERRI (rc_w1) */
+			CANx->MSR = CAN_MSR_ERRI;
+			/* @note the corresponding Flag is cleared by hardware depending on the CAN Bus status*/
+			break;
+		case CAN_IT_LEC:
+			/*  Clear LEC bits */
+			CANx->ESR = RESET;
+			/* Clear CAN_MSR_ERRI (rc_w1) */
+			CANx->MSR = CAN_MSR_ERRI;
+			break;
+		case CAN_IT_ERR:
+			/*Clear LEC bits */
+			CANx->ESR = RESET;
+			/* Clear CAN_MSR_ERRI (rc_w1) */
+			CANx->MSR = CAN_MSR_ERRI;
+			/* @note BOFF, EPVF and EWGF Flags are cleared by hardware depending on the CAN Bus status*/
+			break;
+		default:
+			break;
+	  }
 }
 
 /****************************************************************************************************
@@ -1589,6 +1680,18 @@ void CAN_ClearITPendingBit(CAN_RegDef_t* CANx, uint32_t CAN_IT)
  */
 static ITStatus CheckITStatus(uint32_t CAN_Reg, uint32_t It_Bit)
 {
+	ITStatus pendingbitstatus = RESET;
+	if((CAN_Reg & It_Bit) != (uint32_t)RESET)
+	{
+		/* CAN_IT is set */
+	pendingbitstatus = SET;
+	}else
+	{
+		/* CAN_IT is reset */
+		pendingbitstatus = RESET;
+	}
 
+	return pendingbitstatus;
 }
 
+/*************************************END OF FILE**************************************************/
